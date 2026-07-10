@@ -205,7 +205,12 @@
   }
   /* print */
   @media print{
-    @page{size:A4 landscape;margin:12mm}
+    @page{size:A4;margin:12mm}
+    @page land{size:A4 landscape;margin:12mm}
+    /* mixed orientation: narrative stays portrait; wide data (when comparing) + clippings go landscape */
+    #clipSection{page:land}
+    .foot.foot-land{page:land}
+    body.comparing .cmp-land{page:land}
     body{background:#fff}
     .print-hidden{display:none !important}
     .toolbar,.hint,.s-hint,.no-print{display:none !important}
@@ -293,7 +298,7 @@
   </div>
 
   <!-- 2. RAINFALL -->
-  <div class="section">
+  <div class="section cmp-land">
     <div class="s-head"><span class="s-num">02</span><h2 class="s-title">Rainfall Summary <span class="guj">વરસાદ</span></h2><span class="s-hint">edit any figure → bars redraw</span></div>
     <table>
       <thead><tr>
@@ -322,13 +327,13 @@
   </div>
 
   <!-- 3. RIVER & RESERVOIR -->
-  <div class="section">
+  <div class="section cmp-land">
     <div class="s-head"><span class="s-num">03</span><h2 class="s-title">River &amp; Reservoir Status <span class="guj">ડેમ / નદી સપાટી</span></h2><span class="s-hint">fill % of danger level · edit levels below each tank</span></div>
     <div class="gauges" id="gauges"></div>
   </div>
 
   <!-- 4. DAMAGE -->
-  <div class="section">
+  <div class="section cmp-land">
     <div class="s-head"><span class="s-num">04</span><h2 class="s-title">Damage &amp; Compensation <span class="guj">નુકશાની</span></h2><span class="s-hint">cases 01/06 → today · totals auto-sum</span></div>
     <table>
       <thead><tr>
@@ -343,7 +348,7 @@
   </div>
 
   <!-- 5. INFRASTRUCTURE / ROADS -->
-  <div class="section">
+  <div class="section cmp-land">
     <div class="s-head"><span class="s-num">05</span><h2 class="s-title">Infrastructure — Roads Blocked <span class="guj">બંધ રસ્તા</span></h2><span class="s-hint">R&amp;B closures for traffic</span></div>
     <table style="max-width:640px">
       <thead><tr><th>Road category</th><th>Roads blocked</th><th class="cmp-only">vs date</th><th class="cmp-only">Change</th></tr></thead>
@@ -760,6 +765,9 @@ function hideEmptyForPrint(){
     const ta=cap.querySelector('textarea');
     cap.classList.toggle('print-hidden', !ta || !ta.value.trim());
   });
+  // footer shares the clippings page (landscape) when clippings are present, else stays portrait
+  const foot=document.querySelector('.foot');
+  if(foot) foot.classList.toggle('foot-land', CLIPS.length>0);
 }
 function restoreAfterPrint(){
   document.querySelectorAll('.print-hidden').forEach(e=>e.classList.remove('print-hidden'));
