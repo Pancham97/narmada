@@ -22,6 +22,12 @@
     --watch:#C77D18;
     --alert:#C0392B;
     --emerg:#7A1FA2;
+    /* reservoir fill bands — escalate green→amber→orange→red→crimson */
+    --g-normal:#2E7D52;   /* < 70% */
+    --g-warn:#E0A500;     /* ≥ 70%  WARNING */
+    --g-alert:#E67514;    /* ≥ 80%  ALERT */
+    --g-high:#D0362A;     /* ≥ 90%  HIGH ALERT */
+    --g-danger:#7A1220;   /* ≥ 100% DANGER */
     --radius:10px;
     --shadow:0 1px 2px rgba(15,42,56,.06),0 8px 24px rgba(15,42,56,.07);
   }
@@ -141,13 +147,18 @@
   .tank{position:relative;width:56px;height:120px;margin:8px auto 6px;border:2px solid #B9C6C9;
     border-radius:7px;background:#fff;overflow:hidden}
   .tank .liquid{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,var(--water-soft),var(--water));transition:height .5s cubic-bezier(.2,.8,.2,1)}
-  .tank .danger{position:absolute;left:-3px;right:-3px;top:2%;height:0;border-top:2px dashed var(--alert)}
+  .tank .tmark{position:absolute;left:0;right:0;height:0;border-top:1px dashed rgba(15,42,56,.32);pointer-events:none}
+  .tank .tmark.danger{border-top-style:solid;border-top-width:2px;border-color:var(--g-danger)}
+  .tank.over{border-color:var(--g-danger);box-shadow:0 0 0 2px rgba(122,18,32,.16)}
   .tank .pct{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--ink);mix-blend-mode:difference;color:#fff}
   .gauge .gstat{font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;margin-top:2px}
   .gauge .gfree{font-size:10.5px;color:var(--muted);margin-top:2px}
   .gauge .glevels{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4}
   .gauge .glevels input{width:52px;font:inherit;font-size:10.5px;text-align:center;border:1px solid var(--line);border-radius:4px;padding:1px 2px}
   .gauge .glevels input:focus{outline:none;border-color:var(--water)}
+  .glegend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin:2px 0 14px}
+  .glegend span{display:inline-flex;align-items:center;gap:6px}
+  .gsw{width:11px;height:11px;border-radius:3px;display:inline-block;flex:0 0 auto}
   /* narrative */
   .narr{width:100%;min-height:46px;font:inherit;font-size:13.5px;color:var(--text);line-height:1.55;
     border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#FCFDFD;resize:vertical}
@@ -165,6 +176,9 @@
   .cmp-banner input{font:inherit;font-size:12.5px;font-weight:600;color:var(--ink);
     border:1px solid var(--line);border-radius:6px;padding:2px 8px;width:120px;background:#fff}
   .cmp-banner .cmp-note{color:var(--muted);font-weight:400}
+  .cmp-legend{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-weight:400}
+  .cmp-legend b{font-weight:700}
+  .cmp-legend b.up{color:var(--alert)} .cmp-legend b.dn{color:var(--normal)}
   .cmp-in{width:60px;font:inherit;font-size:13px;text-align:right;border:1px solid var(--water-soft);
     border-radius:6px;padding:3px 6px;background:#F4F9FC;color:var(--text);font-variant-numeric:tabular-nums}
   .cmp-in:focus{outline:none;border-color:var(--water);box-shadow:0 0 0 3px rgba(29,111,165,.12)}
@@ -194,6 +208,12 @@
   .clips-empty{font-size:12.5px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;
     padding:18px;text-align:center;background:#FCFDFD;margin-top:6px}
   #clipSection.clips-drag{outline:2px dashed var(--water);outline-offset:-8px;background:#F4F9FC}
+  /* optional image on any free-text field */
+  .narr-attach{margin-top:8px}
+  .narr-fig{position:relative;margin:0 0 8px;border:1px solid var(--line);border-radius:8px;
+    overflow:hidden;background:#fff;box-shadow:var(--shadow);max-width:100%;width:max-content}
+  .narr-fig img{display:block;max-width:100%;height:auto}
+  .narr-attach.drag{outline:2px dashed var(--water);outline-offset:2px;border-radius:8px}
   /* responsive */
   @media (max-width:760px){
     .kpis{grid-template-columns:repeat(3,1fr)}
@@ -224,6 +244,8 @@
     #clipSection:not(.has-clips){display:none !important}
     .clips{column-width:250px}
     .clips figure{box-shadow:none !important}
+    .narr-fig{box-shadow:none !important;break-inside:avoid;max-width:100%}
+    .narr-attach:not(.has-img){display:none !important}
     .masthead{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -237,10 +259,10 @@
   <label class="btn" style="cursor:pointer">⭱ Load yesterday
     <input type="file" accept="application/json" onchange="importJSON(event)" style="display:none">
   </label>
-  <button class="btn" id="cmpToggle" onclick="toggleCompare()">⇄ Compare: Off</button>
-  <label class="btn" id="cmpLoadBtn" style="cursor:pointer" hidden>⭱ Load comparison report
+  <label class="btn" id="cmpLoadBtn" style="cursor:pointer" title="Load a saved day to compare today against">⇄ Compare a saved day
     <input type="file" accept="application/json" onchange="loadComparison(event)" style="display:none">
   </label>
+  <button class="btn" id="cmpToggle" onclick="toggleCompare()" title="Turn comparison on to type each 'vs' figure by hand">⇄ Compare: Off</button>
   <button class="btn primary" onclick="window.print()">🖨 Print / Save PDF</button>
 </div>
 
@@ -285,7 +307,8 @@
   <div class="cmp-banner cmp-only" id="cmpBanner">
     <span>⇄ Comparing against</span>
     <input id="cmpDate" placeholder="dd/mm/yyyy" oninput="recompute()">
-    <span class="cmp-note">type each “vs” figure below, or load a saved report to prefill every field</span>
+    <span class="cmp-legend"><b class="up">▲</b> higher <b class="dn">▼</b> lower <span class="cmp-note">than that day</span></span>
+    <button class="btn-lite no-print" onclick="clearComparison()" style="margin-left:auto">✕ Clear comparison</button>
   </div>
 
   <!-- KPI DASHBOARD -->
@@ -328,7 +351,14 @@
 
   <!-- 3. RIVER & RESERVOIR -->
   <div class="section cmp-land">
-    <div class="s-head"><span class="s-num">03</span><h2 class="s-title">River &amp; Reservoir Status <span class="guj">ડેમ / નદી સપાટી</span></h2><span class="s-hint">fill % of danger level · edit levels below each tank</span></div>
+    <div class="s-head"><span class="s-num">03</span><h2 class="s-title">River &amp; Reservoir Status <span class="guj">ડેમ / નદી સપાટી</span></h2><span class="s-hint">fill % of danger level · colour escalates by threshold</span></div>
+    <div class="glegend">
+      <span><i class="gsw" style="background:var(--g-normal)"></i> &lt;70% Normal</span>
+      <span><i class="gsw" style="background:var(--g-warn)"></i> 70% Warning</span>
+      <span><i class="gsw" style="background:var(--g-alert)"></i> 80% Alert</span>
+      <span><i class="gsw" style="background:var(--g-high)"></i> 90% High alert</span>
+      <span><i class="gsw" style="background:var(--g-danger)"></i> 100% Danger</span>
+    </div>
     <div class="gauges" id="gauges"></div>
   </div>
 
@@ -479,8 +509,13 @@ function toggleCompare(on){
   const now=(typeof on==='boolean')?on:!document.body.classList.contains('comparing');
   document.body.classList.toggle('comparing',now);
   document.getElementById('cmpToggle').textContent='⇄ Compare: '+(now?'On':'Off');
-  document.getElementById('cmpLoadBtn').hidden=!now;
   recompute();
+}
+function clearComparison(){
+  CMP={};
+  document.querySelectorAll('.cmp-in').forEach(e=>e.value='');
+  const cd=document.getElementById('cmpDate'); if(cd) cd.value='';
+  toggleCompare(false);
 }
 function loadComparison(ev){
   const f=ev.target.files[0];if(!f)return;const r=new FileReader();
@@ -532,7 +567,7 @@ function buildGauges(){
   document.getElementById('gauges').innerHTML = DAMS.map((d,i)=>`
     <div class="gauge">
       <div class="gname">${d[0]}<br><span class="guj" style="font-weight:400;color:var(--muted);font-size:10.5px">${d[1]}</span></div>
-      <div class="tank"><div class="liquid" id="gL${i}"></div><div class="danger"></div><div class="pct" id="gP${i}"></div></div>
+      <div class="tank"><div class="liquid" id="gL${i}"></div><span class="tmark" style="bottom:70%"></span><span class="tmark" style="bottom:80%"></span><span class="tmark" style="bottom:90%"></span><span class="tmark danger" style="bottom:100%"></span><div class="pct" id="gP${i}"></div></div>
       <div class="gstat" id="gS${i}"></div>
       <div class="gfree" id="gF${i}"></div>
       <div class="glevels">danger ${numIn('dgD'+i,d[2],52)}<br>current ${numIn('dgC'+i,d[3],52)}</div>
@@ -545,8 +580,13 @@ const val=id=>{const e=document.getElementById(id);return e?(parseFloat(e.value)
 const set=(id,html)=>{const e=document.getElementById(id);if(e)e.innerHTML=html;};
 const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function autosize(t){t.style.height='auto';t.style.height=t.scrollHeight+'px';}
-function gaugeColor(pct){pct=Math.round(pct);return pct>=98?'--alert':pct>=75?'--watch':'--normal';}
-function gaugeWord(pct){pct=Math.round(pct);return pct>=98?'ALERT':pct>=75?'WATCH':'NORMAL';}
+/* reservoir threshold bands: <70 normal · 70 warning · 80 alert · 90 high alert · 100 danger */
+function gaugeBand(pct){pct=Math.round(pct);
+  if(pct>=100) return {c:'--g-danger',t:'DANGER'};
+  if(pct>=90)  return {c:'--g-high',  t:'HIGH ALERT'};
+  if(pct>=80)  return {c:'--g-alert', t:'ALERT'};
+  if(pct>=70)  return {c:'--g-warn',  t:'WARNING'};
+  return {c:'--g-normal',t:'NORMAL'};}
 
 /* ---------- RECOMPUTE (runs on every edit) ---------- */
 /* ---------- METRICS (pure: reads via get(id)) ---------- */
@@ -556,7 +596,7 @@ function deriveMetrics(get){
     pTot+=p;tTot+=t;cTot+=c;lTot+=l;if(c>maxCum)maxCum=c;if(t>hiVal){hiVal=t;hiName=r[0];}if(t>0)aff++;
     return {p,t,l,c,name:r[0],guj:r[1]};});
   let damsWatch=0; const dams=DAMS.map((d,i)=>{const dg=get('dgD'+i),cu=get('dgC'+i);
-    const pct=dg>0?Math.min(cu/dg*100,100):0; if(Math.round(pct)>=75)damsWatch++; return{pct,danger:dg,current:cu};});
+    const pct=dg>0?Math.min(cu/dg*100,100):0; if(Math.round(pct)>=70)damsWatch++; return{pct,danger:dg,current:cu};});
   const dmgTot=[0,0,0,0,0,0]; DMG.forEach((r,i)=>{for(let j=0;j<6;j++)dmgTot[j]+=get('dm'+i+'_'+j);});
   const houses=get('dm4_0')+get('dm5_0')+get('dm6_0')+get('dm7_0');
   const humanCas=get('dm0_0'),humanInj=get('dm2_0'),livestock=get('dm1_0'),cattleShed=get('dm8_0');
@@ -608,9 +648,10 @@ function recompute(){
 
   // dam gauges
   M.dams.forEach((dm,i)=>{
-    const pct=dm.pct,col=gaugeColor(pct),word=gaugeWord(pct),free=(dm.danger-dm.current);
+    const pct=dm.pct,band=gaugeBand(pct),col=band.c,word=band.t,free=(dm.danger-dm.current);
     const L=document.getElementById('gL'+i);
     L.style.height=pct+'%'; L.style.background=`linear-gradient(180deg, color-mix(in srgb, ${cssv(col)} 55%, white), ${cssv(col)})`;
+    L.parentElement.classList.toggle('over', Math.round(pct)>=100);
     set('gP'+i,pct.toFixed(0)+'%');
     set('gS'+i,`<span style="color:${cssv(col)}">${word}</span>`);
     set('gF'+i,(free>=0?free.toFixed(2)+' m below':Math.abs(free).toFixed(2)+' m ABOVE')+` danger`);
@@ -645,7 +686,7 @@ function recompute(){
     {l:'Highest Station',v:M.hiVal.toFixed(0),small:'mm',sub:M.hiName||'—'},
     {l:'Season Cumulative',v:M.cTot.toFixed(0),small:'mm',sub:`avg ${(M.cTot/n).toFixed(0)} mm`,cmp:MC&&MC.cTot,unit:'mm',pct:true},
     {l:'Affected Talukas',v:M.aff,small:`/ ${n}`,sub:'received rain today',cmp:MC&&MC.aff},
-    {l:'Reservoirs on Watch',v:M.damsWatch,small:`/ ${DAMS.length}`,sub:'≥75% of danger level',cls:M.damsWatch>0?'warn':'',cmp:MC&&MC.damsWatch},
+    {l:'Reservoirs on Watch',v:M.damsWatch,small:`/ ${DAMS.length}`,sub:'≥70% of danger level',cls:M.damsWatch>0?'warn':'',cmp:MC&&MC.damsWatch},
     {l:'Human Casualties',v:M.humanCas,sub:`injuries ${M.humanInj}`,cls:M.humanCas>0?'flag':'',cmp:MC&&MC.humanCas},
     {l:'Houses Damaged',v:M.houses,sub:'partial + full',cls:M.houses>0?'warn':'',cmp:MC&&MC.houses},
     {l:'Livestock Lost',v:M.livestock,sub:'cattle sheds '+M.cattleShed,cmp:MC&&MC.livestock},
@@ -675,7 +716,7 @@ function recompute(){
   // exec summary (only auto-draft if untouched)
   const es=document.getElementById('execSummary');
   if(!es.dataset.touched){
-    es.value=`As of ${document.getElementById('asOf').value} on ${document.getElementById('dateTo').value}, the district recorded ${M.tTot.toFixed(0)} mm of rainfall across ${M.aff} of ${n} talukas in the past 24 hours (avg ${(M.tTot/n).toFixed(1)} mm), highest at ${M.hiName} (${M.hiVal.toFixed(0)} mm). Season cumulative stands at ${M.cTot.toFixed(0)} mm (avg ${(M.cTot/n).toFixed(0)} mm). ${M.damsWatch} of ${DAMS.length} reservoirs are at or above 75% of danger level and under watch. Reported impact to date: ${M.humanCas} human casualties, ${M.houses} houses damaged, ${M.rTot} roads blocked, no evacuations. Overall district status: ${STATUS[lvl].t}.`;
+    es.value=`As of ${document.getElementById('asOf').value} on ${document.getElementById('dateTo').value}, the district recorded ${M.tTot.toFixed(0)} mm of rainfall across ${M.aff} of ${n} talukas in the past 24 hours (avg ${(M.tTot/n).toFixed(1)} mm), highest at ${M.hiName} (${M.hiVal.toFixed(0)} mm). Season cumulative stands at ${M.cTot.toFixed(0)} mm (avg ${(M.cTot/n).toFixed(0)} mm). ${M.damsWatch} of ${DAMS.length} reservoirs are at or above 70% of danger level and under watch. Reported impact to date: ${M.humanCas} human casualties, ${M.houses} houses damaged, ${M.rTot} roads blocked, no evacuations. Overall district status: ${STATUS[lvl].t}.`;
     autosize(es);
   }
 }
@@ -689,6 +730,7 @@ function snapshot(){
   document.querySelectorAll('input, textarea, select').forEach(el=>{if(el.id)o[el.id]=el.value;});
   o.execTouched=document.getElementById('execSummary').dataset.touched||'';
   o._clips=CLIPS.map(normClip);
+  o._narrImg=NARRIMG;
   o._cmp=CMP; o._comparing=document.body.classList.contains('comparing');
   return o;
 }
@@ -705,6 +747,8 @@ function importJSON(ev){
     Object.keys(o).forEach(id=>{const el=document.getElementById(id);if(el&&id!=='execTouched')el.value=o[id];});
     if(o.execTouched)document.getElementById('execSummary').dataset.touched='1';
     if(Array.isArray(o._clips)){CLIPS=o._clips.map(normClip);renderClips();}
+    NARRIMG=(o._narrImg&&typeof o._narrImg==='object')?o._narrImg:{};
+    renderAllNarrImg();
     if(o._cmp&&typeof o._cmp==='object')CMP=o._cmp;
     toggleCompare(!!o._comparing);
     recompute();document.querySelectorAll('textarea').forEach(autosize);
@@ -748,10 +792,58 @@ function setClipAction(i,v){if(CLIPS[i])CLIPS[i].action=v;}
   sec.addEventListener('drop',ev=>{ev.preventDefault();sec.classList.remove('clips-drag');addFiles(ev.dataTransfer.files);});
 })();
 
+/* ---------- OPTIONAL IMAGE ON ANY FREE-TEXT FIELD ---------- */
+let NARRIMG = {};   // textarea id -> base64 data-URI (optional, per field)
+function renderNarrImg(id){
+  const box=document.querySelector('.narr-attach[data-for="'+id+'"]');
+  if(!box) return;
+  const src=NARRIMG[id]||'';
+  box.innerHTML =
+    (src?`<figure class="narr-fig"><img src="${src}" alt="illustration">`
+        +`<button class="clip-rm no-print" title="Remove image" onclick="removeNarrImg('${id}')">×</button></figure>`:'')
+    +`<label class="btn-lite no-print" style="cursor:pointer">${src?'⟳ Replace image':'+ Add image'}`
+    +`<input type="file" accept="image/*" onchange="addNarrImg('${id}',event)" style="display:none"></label>`;
+  box.classList.toggle('has-img', !!src);
+}
+function renderAllNarrImg(){document.querySelectorAll('.narr-attach').forEach(b=>renderNarrImg(b.dataset.for));}
+function addNarrImg(id,ev){
+  const f=ev.target.files&&ev.target.files[0]; ev.target.value='';
+  if(!f||!f.type||!f.type.startsWith('image/'))return;
+  const r=new FileReader();
+  r.onload=()=>{NARRIMG[id]=r.result;renderNarrImg(id);};
+  r.readAsDataURL(f);
+}
+function removeNarrImg(id){delete NARRIMG[id];renderNarrImg(id);}
+function initNarrImg(){
+  document.querySelectorAll('textarea.narr').forEach(t=>{
+    if(!t.id) return;
+    if(t.nextElementSibling && t.nextElementSibling.classList.contains('narr-attach')) return;
+    const d=document.createElement('div');
+    d.className='narr-attach'; d.dataset.for=t.id;
+    t.after(d);
+    renderNarrImg(t.id);
+  });
+}
+
+/* ---------- RENUMBER VISIBLE SECTIONS FOR PRINT ---------- */
+function renumberSections(){
+  let n=0;
+  const clipHas=document.getElementById('clipSection').classList.contains('has-clips');
+  document.querySelectorAll('.s-num').forEach(el=>{
+    if(el.dataset.orig===undefined) el.dataset.orig=el.textContent;
+    const hidden = el.closest('.print-hidden') || (el.closest('#clipSection') && !clipHas);
+    if(hidden) return;
+    el.textContent=String(++n).padStart(2,'0');
+  });
+}
+function restoreSectionNumbers(){
+  document.querySelectorAll('.s-num').forEach(el=>{if(el.dataset.orig!==undefined)el.textContent=el.dataset.orig;});
+}
+
 /* ---------- HIDE EMPTY FREE-TEXT ON PRINT ---------- */
 function hideEmptyForPrint(){
   document.querySelectorAll('textarea.narr').forEach(t=>{
-    const empty = !t.value.trim();
+    const empty = !t.value.trim() && !NARRIMG[t.id];   // keep the block if it has an image, even with no text
     const block = t.closest('.grid2 > div') || t.closest('.section');
     if(block) block.classList.toggle('print-hidden', empty);
   });
@@ -768,15 +860,17 @@ function hideEmptyForPrint(){
   // footer shares the clippings page (landscape) when clippings are present, else stays portrait
   const foot=document.querySelector('.foot');
   if(foot) foot.classList.toggle('foot-land', CLIPS.length>0);
+  renumberSections();   // sequential numbers after empty sections drop out
 }
 function restoreAfterPrint(){
   document.querySelectorAll('.print-hidden').forEach(e=>e.classList.remove('print-hidden'));
+  restoreSectionNumbers();
 }
 window.addEventListener('beforeprint',hideEmptyForPrint);
 window.addEventListener('afterprint',restoreAfterPrint);
 
 /* ---------- INIT ---------- */
-buildRF();buildDMG();buildROADS();buildGauges();renderClips();
+buildRF();buildDMG();buildROADS();buildGauges();renderClips();initNarrImg();
 document.getElementById('genStamp').textContent=new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
 ['asOf','dateTo','dateFrom','alertLevel'].forEach(id=>document.getElementById(id).addEventListener('input',recompute));
 recompute();
