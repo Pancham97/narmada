@@ -215,7 +215,7 @@
   .narr-fig img{display:block;max-width:100%;height:auto}
   .narr-attach.drag{outline:2px dashed var(--water);outline-offset:2px;border-radius:8px}
   /* responsive */
-  @media (max-width:760px){
+  @media screen and (max-width:760px){  /* screen-only: A4 print (~703px) must keep the full multi-column layout */
     .kpis{grid-template-columns:repeat(3,1fr)}
     .gauges{grid-template-columns:repeat(2,1fr)}
     .grid2{grid-template-columns:1fr}
