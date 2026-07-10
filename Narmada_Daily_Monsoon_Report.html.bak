@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Monsoon Situation Report — Narmada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&family=Noto+Sans+Gujarati:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F2A38;          /* storm slate — masthead */
+    --ink-2:#173A4B;
+    --surface:#EEF1F0;      /* cool working paper */
+    --card:#FFFFFF;
+    --line:#D6DEDE;
+    --muted:#5B6B70;
+    --text:#12262E;
+    --water:#1D6FA5;        /* monsoon blue */
+    --water-soft:#7FB4D6;
+    --normal:#2E7D52;
+    --watch:#C77D18;
+    --alert:#C0392B;
+    --emerg:#7A1FA2;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(15,42,56,.06),0 8px 24px rgba(15,42,56,.07);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--surface);
+    color:var(--text);
+    font-family:"IBM Plex Sans","Noto Sans Gujarati",system-ui,sans-serif;
+    font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+  }
+  .guj{font-family:"Noto Sans Gujarati","IBM Plex Sans",sans-serif;}
+  /* ---- toolbar (screen only) ---- */
+  .toolbar{
+    position:sticky;top:0;z-index:50;
+    background:var(--ink);color:#fff;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:10px 18px;border-bottom:1px solid rgba(255,255,255,.12);
+  }
+  .toolbar .tt{font-weight:600;font-size:13px;letter-spacing:.04em;text-transform:uppercase;opacity:.85;margin-right:auto}
+  .btn{
+    font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+    background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.22);
+    padding:7px 13px;border-radius:8px;display:inline-flex;align-items:center;gap:7px;
+    transition:background .15s,border-color .15s;
+  }
+  .btn:hover{background:rgba(255,255,255,.20)}
+  .btn.primary{background:var(--water);border-color:var(--water)}
+  .btn.primary:hover{background:#2280bd}
+  .hint{font-size:12px;color:var(--muted);background:#fff;border:1px dashed var(--line);
+        border-radius:8px;padding:8px 12px;margin:14px auto 0;max-width:920px}
+  .hint b{color:var(--water)}
+  /* ---- document ---- */
+  .doc{
+    max-width:960px;margin:22px auto 60px;background:var(--card);
+    box-shadow:var(--shadow);border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  }
+  /* masthead */
+  .masthead{background:linear-gradient(160deg,var(--ink),var(--ink-2));color:#fff;padding:22px 30px 20px;position:relative}
+  .crest{display:flex;align-items:flex-start;gap:16px}
+  .crest .seal{width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.55);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:rgba(255,255,255,.06)}
+  .crest .seal svg{width:28px;height:28px}
+  .m-office{font-size:12.5px;letter-spacing:.03em;opacity:.8;margin:0 0 2px}
+  .m-title{font-family:"IBM Plex Serif",serif;font-weight:600;font-size:23px;line-height:1.15;margin:1px 0 3px}
+  .m-title .guj{font-weight:600}
+  .m-sub{font-size:13px;opacity:.82;margin:0}
+  .m-right{position:absolute;top:22px;right:30px;text-align:right}
+  .status-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 8px 6px 14px;font-size:12.5px}
+  .status-pill .dot{width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.18)}
+  .status-pill select{font:inherit;font-size:12.5px;font-weight:700;color:#fff;background:transparent;
+    border:none;cursor:pointer;letter-spacing:.03em}
+  .status-pill select option{color:#000}
+  .m-meta{margin-top:12px;font-size:12px;opacity:.85;display:flex;gap:18px;justify-content:flex-end;flex-wrap:wrap}
+  .m-meta input{font:inherit;font-size:12px;color:#fff;background:transparent;border:none;
+    border-bottom:1px solid rgba(255,255,255,.3);width:110px;text-align:right}
+  .m-meta label{opacity:.7}
+  /* KPI strip */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--line);
+    border-bottom:1px solid var(--line)}
+  .kpi{background:var(--card);padding:13px 14px 12px}
+  .kpi .k-label{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);
+    display:flex;align-items:center;gap:5px;min-height:24px}
+  .kpi .k-val{font-size:23px;font-weight:700;line-height:1.05;margin-top:5px;color:var(--ink)}
+  .kpi .k-val small{font-size:12px;font-weight:600;color:var(--muted)}
+  .kpi .k-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .kpi.flag .k-val{color:var(--alert)}
+  .kpi.warn .k-val{color:var(--watch)}
+  .kpi input{width:56px;font:inherit;font-size:19px;font-weight:700;color:var(--ink);
+    border:1px solid transparent;border-radius:6px;padding:1px 3px;background:#F3F6F6}
+  .kpi input:focus{outline:none;border-color:var(--water);background:#fff}
+  /* sections */
+  .section{padding:22px 30px;border-top:1px solid var(--line)}
+  .section:first-of-type{border-top:none}
+  .s-head{display:flex;align-items:baseline;gap:12px;margin:0 0 14px}
+  .s-num{font-family:"IBM Plex Serif",serif;font-weight:700;font-size:13px;color:var(--water);
+    letter-spacing:.06em;flex:0 0 auto;padding-top:2px}
+  .s-title{font-size:16px;font-weight:700;color:var(--ink);margin:0}
+  .s-title .guj{font-weight:600;color:var(--muted);font-size:14px;margin-left:8px}
+  .s-hint{font-size:11.5px;color:var(--muted);margin-left:auto;font-weight:500;align-self:center}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{background:#F4F7F7;color:var(--muted);font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:.03em;text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:bottom}
+  thead th:first-child,tbody td:first-child{text-align:left}
+  tbody td{padding:5px 10px;border-bottom:1px solid #EDF1F1;text-align:right}
+  tbody tr:hover{background:#FAFCFC}
+  tfoot td{padding:8px 10px;font-weight:700;background:#F4F7F7;border-top:2px solid var(--line);text-align:right;color:var(--ink)}
+  tfoot td:first-child{text-align:left}
+  .cell-in{width:62px;font:inherit;font-size:13px;text-align:right;border:1px solid var(--line);
+    border-radius:6px;padding:3px 6px;background:#fff;color:var(--text);font-variant-numeric:tabular-nums}
+  .cell-in:focus{outline:none;border-color:var(--water);box-shadow:0 0 0 3px rgba(29,111,165,.12)}
+  .tname{font-weight:600;color:var(--ink)}
+  .tname small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+  .derived{color:var(--muted);font-weight:600}
+  /* rainfall chart */
+  .rf-wrap{margin-top:16px}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 64px;align-items:center;gap:12px;margin:9px 0}
+  .bar-row .bl{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .bar-row .bl small{display:block;font-weight:400;color:var(--muted);font-size:10.5px}
+  .track{position:relative;height:22px;background:#EEF3F3;border-radius:5px;overflow:visible}
+  .fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#2280bd,var(--water));position:relative;transition:width .4s cubic-bezier(.2,.8,.2,1)}
+  .today-cap{position:absolute;top:0;height:100%;background:#6FB2DA;border-radius:0 5px 5px 0}
+  .ly-tick{position:absolute;top:-3px;height:28px;width:2px;background:var(--muted);opacity:.65}
+  .bar-val{font-size:13px;font-weight:700;text-align:right;color:var(--ink)}
+  .bar-val small{font-weight:500;color:var(--water)}
+  .legend{display:flex;gap:18px;font-size:11.5px;color:var(--muted);margin:4px 0 2px;flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  /* dam gauges */
+  .gauges{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:6px}
+  .gauge{background:#F8FAFB;border:1px solid var(--line);border-radius:10px;padding:12px 10px 10px;text-align:center}
+  .gauge .gname{font-size:12px;font-weight:600;color:var(--ink);min-height:32px;display:flex;align-items:center;justify-content:center;line-height:1.2}
+  .tank{position:relative;width:56px;height:120px;margin:8px auto 6px;border:2px solid #B9C6C9;
+    border-radius:7px;background:#fff;overflow:hidden}
+  .tank .liquid{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,var(--water-soft),var(--water));transition:height .5s cubic-bezier(.2,.8,.2,1)}
+  .tank .danger{position:absolute;left:-3px;right:-3px;top:0;height:0;border-top:2px dashed var(--alert)}
+  .tank .pct{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--ink);mix-blend-mode:difference;color:#fff}
+  .gauge .gstat{font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;margin-top:2px}
+  .gauge .gfree{font-size:10.5px;color:var(--muted);margin-top:2px}
+  .gauge .glevels{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.4}
+  .gauge .glevels input{width:52px;font:inherit;font-size:10.5px;text-align:center;border:1px solid var(--line);border-radius:4px;padding:1px 2px}
+  .gauge .glevels input:focus{outline:none;border-color:var(--water)}
+  /* narrative */
+  .narr{width:100%;min-height:46px;font:inherit;font-size:13.5px;color:var(--text);line-height:1.55;
+    border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#FCFDFD;resize:vertical}
+  .narr:focus{outline:none;border-color:var(--water);box-shadow:0 0 0 3px rgba(29,111,165,.1)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  /* footer */
+  .foot{padding:18px 30px 26px;border-top:1px solid var(--line);background:#FAFCFC;
+    display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .foot .sign{line-height:1.6}
+  .foot input{font:inherit;font-size:12px;border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--text);width:180px}
+  /* responsive */
+  @media (max-width:760px){
+    .kpis{grid-template-columns:repeat(3,1fr)}
+    .gauges{grid-template-columns:repeat(2,1fr)}
+    .grid2{grid-template-columns:1fr}
+    .bar-row{grid-template-columns:110px 1fr 56px}
+    .m-right{position:static;text-align:left;margin-top:14px}
+    .m-meta{justify-content:flex-start}
+  }
+  /* print */
+  @media print{
+    @page{size:A4;margin:12mm}
+    body{background:#fff}
+    .toolbar,.hint,.s-hint,.no-print{display:none !important}
+    .doc{box-shadow:none;border:none;margin:0;max-width:100%;border-radius:0}
+    .section{break-inside:avoid;padding:14px 4px}
+    .kpis{grid-template-columns:repeat(6,1fr)}
+    .cell-in,.kpi input,.m-meta input,.narr,.glevels input,.foot input{
+      border:none !important;background:transparent !important;box-shadow:none !important;-webkit-appearance:none}
+    .narr{padding:0;min-height:0}
+    .gauge,.track,.tank{break-inside:avoid}
+    .masthead{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <span class="tt">Daily Monsoon Situation Report · Narmada</span>
+  <button class="btn" onclick="exportJSON()">⭳ Save data (JSON)</button>
+  <label class="btn" style="cursor:pointer">⭱ Load yesterday
+    <input type="file" accept="application/json" onchange="importJSON(event)" style="display:none">
+  </label>
+  <button class="btn primary" onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+
+<div class="hint no-print">
+  Every number below is editable — type into any field and the <b>dashboard tiles, rainfall bars and reservoir gauges recompute instantly</b>.
+  Tomorrow: hit <b>Save data</b> today, <b>Load yesterday</b> next morning, tweak the figures, then <b>Print / Save PDF</b> to hand the collector. Nothing here needs the internet once loaded.
+</div>
+
+<div class="doc" id="doc">
+  <!-- MASTHEAD -->
+  <div class="masthead">
+    <div class="crest">
+      <div class="seal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2s6 5.5 6 10a6 6 0 0 1-12 0c0-4.5 6-10 6-10z"/>
+        </svg>
+      </div>
+      <div>
+        <p class="m-office guj">કલેક્ટર કચેરી, નર્મદા – રાજપીપળા</p>
+        <h1 class="m-title">Daily Monsoon Situation Report<br><span class="guj" style="font-size:16px;opacity:.9">દૈનિક ચોમાસુ પરિસ્થિતિ અહેવાલ</span></h1>
+        <p class="m-sub">Office of the District Collector, Narmada · District Emergency Operations Centre</p>
+      </div>
+    </div>
+    <div class="m-right">
+      <div class="status-pill">
+        <span class="dot" id="statusDot"></span>
+        <select id="alertLevel" onchange="recompute()">
+          <option value="normal">NORMAL · સામાન્ય</option>
+          <option value="watch" selected>WATCH · સાવધાન</option>
+          <option value="alert">ALERT · એલર્ટ</option>
+          <option value="emerg">EMERGENCY · કટોકટી</option>
+        </select>
+      </div>
+    </div>
+    <div class="m-meta">
+      <span><label>Reporting window</label> <input id="dateFrom" value="08/07/2026"> – <input id="dateTo" value="09/07/2026"></span>
+      <span><label>As of</label> <input id="asOf" value="06:00 hrs" style="width:80px"></span>
+    </div>
+  </div>
+
+  <!-- KPI DASHBOARD -->
+  <div class="kpis" id="kpiStrip"></div>
+
+  <!-- 1. EXECUTIVE SUMMARY -->
+  <div class="section">
+    <div class="s-head"><span class="s-num">01</span><h2 class="s-title">Executive Summary <span class="guj">કારોબારી સારાંશ</span></h2><span class="s-hint">auto-drafted from today's figures · edit freely</span></div>
+    <textarea class="narr" id="execSummary" oninput="autosize(this)" style="min-height:90px"></textarea>
+  </div>
+
+  <!-- 2. RAINFALL -->
+  <div class="section">
+    <div class="s-head"><span class="s-num">02</span><h2 class="s-title">Rainfall Summary <span class="guj">વરસાદ</span></h2><span class="s-hint">edit any figure → bars redraw</span></div>
+    <table>
+      <thead><tr>
+        <th>Taluka · તાલુકો</th>
+        <th>Season to prev. day (mm)</th>
+        <th>Today (mm)</th>
+        <th>Cumulative (mm)</th>
+        <th>Same day last yr (mm)</th>
+      </tr></thead>
+      <tbody id="rfBody"></tbody>
+      <tfoot><tr>
+        <td>Total / Average · કુલ / સરેરાશ</td>
+        <td id="rfPrevTot"></td><td id="rfTodayTot"></td><td id="rfCumTot"></td><td id="rfLyTot"></td>
+      </tr></tfoot>
+    </table>
+    <div class="rf-wrap">
+      <div class="legend">
+        <span><i class="sw" style="background:var(--water)"></i> Season cumulative</span>
+        <span><i class="sw" style="background:#6FB2DA"></i> Today's rainfall</span>
+        <span><i class="sw" style="width:2px;height:12px;background:var(--muted)"></i> Same day last year</span>
+      </div>
+      <div id="rfChart"></div>
+    </div>
+  </div>
+
+  <!-- 3. RIVER & RESERVOIR -->
+  <div class="section">
+    <div class="s-head"><span class="s-num">03</span><h2 class="s-title">River &amp; Reservoir Status <span class="guj">ડેમ / નદી સપાટી</span></h2><span class="s-hint">fill % of danger level · edit levels below each tank</span></div>
+    <div class="gauges" id="gauges"></div>
+  </div>
+
+  <!-- 4. DAMAGE -->
+  <div class="section">
+    <div class="s-head"><span class="s-num">04</span><h2 class="s-title">Damage &amp; Compensation <span class="guj">નુકશાની</span></h2><span class="s-hint">cases 01/06 → today · totals auto-sum</span></div>
+    <table>
+      <thead><tr>
+        <th>Category · વિગત</th><th>Total cases</th><th>Approved</th><th>Rejected</th><th>Pending</th><th>Paid</th><th>Pay pending</th>
+      </tr></thead>
+      <tbody id="dmgBody"></tbody>
+      <tfoot><tr>
+        <td>Total · કુલ</td>
+        <td id="dmgT0"></td><td id="dmgT1"></td><td id="dmgT2"></td><td id="dmgT3"></td><td id="dmgT4"></td><td id="dmgT5"></td>
+      </tr></tfoot>
+    </table>
+  </div>
+
+  <!-- 5. INFRASTRUCTURE / ROADS -->
+  <div class="section">
+    <div class="s-head"><span class="s-num">05</span><h2 class="s-title">Infrastructure — Roads Blocked <span class="guj">બંધ રસ્તા</span></h2><span class="s-hint">R&amp;B closures for traffic</span></div>
+    <table style="max-width:640px">
+      <thead><tr><th>Road category</th><th>Roads blocked</th></tr></thead>
+      <tbody id="roadBody"></tbody>
+      <tfoot><tr><td>Total · કુલ</td><td id="roadTot"></td></tr></tfoot>
+    </table>
+  </div>
+
+  <!-- 6. RESCUE & RELIEF -->
+  <div class="section">
+    <div class="s-head"><span class="s-num">06</span><h2 class="s-title">Rescue &amp; Relief <span class="guj">બચાવ / રાહત</span></h2></div>
+    <textarea class="narr" id="reliefNote" oninput="autosize(this)">No evacuations, rescues, or relief camps required as of this report. Food packet distribution: nil. SDRF/NDRF teams on standby.</textarea>
+  </div>
+
+  <!-- 7-14 NARRATIVE -->
+  <div class="section">
+    <div class="grid2">
+      <div>
+        <div class="s-head"><span class="s-num">07</span><h2 class="s-title">Control Room <span class="guj">કંટ્રોલ રૂમ</span></h2></div>
+        <textarea class="narr" id="n7" oninput="autosize(this)">Control room operational 24×7. Calls received: —. Grievances: nil. Unresolved issues: none.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">08</span><h2 class="s-title">Department Actions <span class="guj">વિભાગીય કામગીરી</span></h2></div>
+        <textarea class="narr" id="n8" oninput="autosize(this)">Revenue, Police, R&B, Health, Panchayat & Electricity on monsoon alert. Field teams monitoring low-lying areas.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">09</span><h2 class="s-title">Vulnerable Locations <span class="guj">સંવેદનશીલ સ્થળો</span></h2></div>
+        <textarea class="narr" id="n9" oninput="autosize(this)">Watch on reservoirs near danger level (Nana Kakadi Amba, Chopadvav). Low-lying villages downstream of Karjan under observation.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">10</span><h2 class="s-title">Forecast &amp; Advisory <span class="guj">આગાહી</span></h2></div>
+        <textarea class="narr" id="n10" oninput="autosize(this)">IMD 24–72 hr forecast: [insert]. Advisory issued to talukas to remain alert to intermittent heavy spells.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">11</span><h2 class="s-title">Media Monitoring <span class="guj">મીડિયા</span></h2></div>
+        <textarea class="narr" id="n11" oninput="autosize(this)">No negative news / social media issues flagged. Nil.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">12</span><h2 class="s-title">Positive Developments <span class="guj">હકારાત્મક</span></h2></div>
+        <textarea class="narr" id="n12" oninput="autosize(this)">Compensation disbursed in 11 of 24 damage cases. No disruption to essential services.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">13</span><h2 class="s-title">Pending Critical Issues <span class="guj">બાકી મુદ્દા</span></h2></div>
+        <textarea class="narr" id="n13" oninput="autosize(this)">13 damage cases pending decision. No issue requiring State/Collector escalation at present.</textarea>
+      </div>
+      <div>
+        <div class="s-head"><span class="s-num">14</span><h2 class="s-title">Next 24-hr Action Plan <span class="guj">આગામી કામગીરી</span></h2></div>
+        <textarea class="narr" id="n14" oninput="autosize(this)">Continue reservoir gauge monitoring every 3 hrs; clear pending compensation cases; keep SDRF on standby.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="foot">
+    <div class="sign">Prepared by <input id="preparedBy" value="District Control Room, Narmada"><br>
+      Contact <input id="contact" value="Toll-free 1077 / 02640-______"></div>
+    <div class="sign" style="text-align:right">Approved · District Collector, Narmada<br>
+      <span style="font-size:11px">Generated <span id="genStamp"></span></span></div>
+  </div>
+</div>
+
+<script>
+/* ---------- SEED DATA (from uploaded report, 09/07/2026) ---------- */
+const RF = [ // [taluka, guj, seasonToPrev, today, lastYear]  — mm
+  ["Tilakwada","તિલકવાડા",124,10,17],
+  ["Nandod","નાંદોદ",212,8,6],
+  ["Dediyapada","દેડીયાપાડા",183,14,14],
+  ["Sagbara","સાગબારા",356,7,37],
+  ["Garudeshwar","ગરૂડેશ્વર",70,4,1],
+  ["Chikhda","ચીકદા",193,7,0],
+];
+const DAMS = [ // [name, guj, danger, current, isRiver]
+  ["Narmada Dam","નર્મદા ડેમ",138.68,126.97,false],
+  ["Karjan Dam","કરજણ ડેમ",116.10,102.82,false],
+  ["Nana Kakadi Amba","નાના કાકડી આંબા",187.71,182.00,false],
+  ["Chopadvav Dam","ચોપડવાવ ડેમ",187.40,183.05,false],
+  ["Narmada @ Garudeshwar","ગરૂડેશ્વર ગેજ",31.09,14.05,true],
+];
+const DMG = [ // [cat, guj, total, appr, rej, pend, paid, payPend]
+  ["Human deaths","માનવ મૃત્યુ",0,0,0,0,0,0],
+  ["Livestock deaths","પશુ મૃત્યુ",2,1,0,1,1,1],
+  ["Human injuries","માનવ ઈજા",1,0,0,1,0,1],
+  ["Huts","ઝુંપડા",0,0,0,0,0,0],
+  ["Kaccha house (partial)","કાચા મકાન અંશત:",18,8,0,10,8,10],
+  ["Kaccha house (full)","કાચા મકાન સંપૂર્ણ",0,0,0,0,0,0],
+  ["Pakka house (partial)","પાકા મકાન અંશત:",2,1,0,1,1,1],
+  ["Pakka house (full)","પાકા મકાન સંપૂર્ણ",0,0,0,0,0,0],
+  ["Cattle shed","કેટલ શેડ",1,1,0,0,1,0],
+];
+const ROADS = [ // [cat, guj]
+  ["State Highway","સ્ટેટ હાઈવે",0],
+  ["Other roads","અન્ય માર્ગો",0],
+  ["Panchayat","પંચાયત",0],
+  ["National Highway","નેશનલ હાઈવે",0],
+  ["NHAI","NHAI",0],
+];
+const STATUS = {normal:{c:'--normal',t:'NORMAL'},watch:{c:'--watch',t:'WATCH'},alert:{c:'--alert',t:'ALERT'},emerg:{c:'--emerg',t:'EMERGENCY'}};
+
+/* ---------- BUILD EDITABLE TABLES ONCE ---------- */
+function numIn(id,val,w){return `<input class="cell-in" id="${id}" value="${val}" inputmode="decimal" oninput="recompute()" ${w?`style="width:${w}px"`:''}>`;}
+
+function buildRF(){
+  document.getElementById('rfBody').innerHTML = RF.map((r,i)=>`
+    <tr>
+      <td class="tname">${r[0]}<small class="guj">${r[1]}</small></td>
+      <td>${numIn('rf'+i+'p',r[2])}</td>
+      <td>${numIn('rf'+i+'t',r[3])}</td>
+      <td class="derived" id="rf${i}c">—</td>
+      <td>${numIn('rf'+i+'l',r[4])}</td>
+    </tr>`).join('');
+}
+function buildDMG(){
+  document.getElementById('dmgBody').innerHTML = DMG.map((r,i)=>`
+    <tr>
+      <td class="tname">${r[0]}<small class="guj">${r[1]}</small></td>
+      ${[2,3,4,5,6,7].map((c,j)=>`<td>${numIn('dm'+i+'_'+j,r[c])}</td>`).join('')}
+    </tr>`).join('');
+}
+function buildROADS(){
+  document.getElementById('roadBody').innerHTML = ROADS.map((r,i)=>`
+    <tr><td class="tname">${r[0]} <span class="guj" style="color:var(--muted);font-weight:400">${r[1]}</span></td>
+    <td>${numIn('rd'+i,r[2],70)}</td></tr>`).join('');
+}
+function buildGauges(){
+  document.getElementById('gauges').innerHTML = DAMS.map((d,i)=>`
+    <div class="gauge">
+      <div class="gname">${d[0]}<br><span class="guj" style="font-weight:400;color:var(--muted);font-size:10.5px">${d[1]}</span></div>
+      <div class="tank"><div class="liquid" id="gL${i}"></div><div class="danger"></div><div class="pct" id="gP${i}"></div></div>
+      <div class="gstat" id="gS${i}"></div>
+      <div class="gfree" id="gF${i}"></div>
+      <div class="glevels">danger ${numIn('dgD'+i,d[2],52)}<br>current ${numIn('dgC'+i,d[3],52)}</div>
+    </div>`).join('');
+}
+
+/* ---------- HELPERS ---------- */
+const val=id=>{const e=document.getElementById(id);return e?(parseFloat(e.value)||0):0;};
+const set=(id,html)=>{const e=document.getElementById(id);if(e)e.innerHTML=html;};
+const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function autosize(t){t.style.height='auto';t.style.height=t.scrollHeight+'px';}
+function gaugeColor(pct){return pct>=90?'--alert':pct>=75?'--watch':'--normal';}
+function gaugeWord(pct){return pct>=90?'ALERT':pct>=75?'WATCH':'NORMAL';}
+
+/* ---------- RECOMPUTE (runs on every edit) ---------- */
+function recompute(){
+  // rainfall
+  let pTot=0,tTot=0,cTot=0,lTot=0,maxCum=0,hiToday=-1,hiTodayName='',hiTodayVal=0,affTal=0;
+  const cum=RF.map((r,i)=>{
+    const p=val('rf'+i+'p'),t=val('rf'+i+'t'),l=val('rf'+i+'l'),c=p+t;
+    set('rf'+i+'c',c.toFixed(0)); pTot+=p;tTot+=t;cTot+=c;lTot+=l;
+    if(c>maxCum)maxCum=c; if(t>hiTodayVal){hiTodayVal=t;hiTodayName=r[0];} if(t>0)affTal++;
+    return {p,t,l,c,name:r[0],guj:r[1]};
+  });
+  const n=RF.length;
+  set('rfPrevTot',pTot.toFixed(0));set('rfTodayTot',tTot.toFixed(0));
+  set('rfCumTot',`${cTot.toFixed(0)} <span class="derived" style="font-weight:600">(avg ${(cTot/n).toFixed(0)})</span>`);
+  set('rfLyTot',lTot.toFixed(0));
+
+  // rainfall bars
+  const scale=Math.max(maxCum,1);
+  set('rfChart', cum.map(r=>{
+    const w=(r.c/scale*100), capW=(r.t/scale*100), lyX=(r.l/scale*100);
+    return `<div class="bar-row">
+      <div class="bl">${r.name}<small class="guj">${r.guj}</small></div>
+      <div class="track">
+        <div class="fill" style="width:${w}%">
+          ${r.t>0?`<div class="today-cap" style="right:0;width:${(r.t/Math.max(r.c,1)*100)}%"></div>`:''}
+        </div>
+        <div class="ly-tick" title="last year" style="left:${lyX}%"></div>
+      </div>
+      <div class="bar-val">${r.c.toFixed(0)}${r.t>0?`<small> +${r.t.toFixed(0)}</small>`:''}</div>
+    </div>`;
+  }).join(''));
+
+  // dam gauges
+  DAMS.forEach((d,i)=>{
+    const danger=val('dgD'+i),current=val('dgC'+i);
+    const pct=danger>0?Math.min(current/danger*100,100):0;
+    const col=gaugeColor(pct),word=gaugeWord(pct),free=(danger-current);
+    const L=document.getElementById('gL'+i);
+    L.style.height=pct+'%'; L.style.background=`linear-gradient(180deg, color-mix(in srgb, ${cssv(col)} 55%, white), ${cssv(col)})`;
+    set('gP'+i,pct.toFixed(0)+'%');
+    set('gS'+i,`<span style="color:${cssv(col)}">${word}</span>`);
+    set('gF'+i,(free>=0?free.toFixed(2)+' m below':Math.abs(free).toFixed(2)+' m ABOVE')+` danger`);
+  });
+
+  // damage totals
+  let dt=[0,0,0,0,0,0];
+  DMG.forEach((r,i)=>{for(let j=0;j<6;j++)dt[j]+=val('dm'+i+'_'+j);});
+  dt.forEach((v,j)=>set('dmgT'+j,v));
+
+  // roads
+  let rTot=0;ROADS.forEach((r,i)=>rTot+=val('rd'+i));set('roadTot',rTot);
+
+  // houses damaged (partial+full kaccha+pakka totals -> cases col)
+  const houses=val('dm4_0')+val('dm5_0')+val('dm6_0')+val('dm7_0');
+  const humanCas=val('dm0_0'); // human deaths total
+  const humanInj=val('dm2_0');
+
+  // reservoir flags for KPI
+  let damsWatch=0; DAMS.forEach((d,i)=>{const p=val('dgD'+i)>0?val('dgC'+i)/val('dgD'+i)*100:0; if(p>=75)damsWatch++;});
+
+  // KPI STRIP
+  const kpis=[
+    {l:'24-hr Rainfall · આજ',v:tTot.toFixed(0),small:'mm',sub:`avg ${(tTot/n).toFixed(1)} mm across ${n} talukas`},
+    {l:'Highest Station',v:hiTodayVal.toFixed(0),small:'mm',sub:hiTodayName||'—'},
+    {l:'Season Cumulative',v:cTot.toFixed(0),small:'mm',sub:`avg ${(cTot/n).toFixed(0)} mm`},
+    {l:'Affected Talukas',v:affTal,small:`/ ${n}`,sub:'received rain today'},
+    {l:'Reservoirs on Watch',v:damsWatch,small:`/ ${DAMS.length}`,sub:'≥75% of danger level',cls:damsWatch>0?'warn':''},
+    {l:'Human Casualties',v:humanCas,sub:`injuries ${humanInj}`,cls:humanCas>0?'flag':''},
+    {l:'Houses Damaged',v:houses,sub:'partial + full',cls:houses>0?'warn':''},
+    {l:'Livestock Lost',v:val('dm1_0'),sub:'cattle sheds '+val('dm8_0')},
+    {l:'Roads Blocked',v:rTot,sub:'R&B network',cls:rTot>0?'flag':''},
+    {l:'Persons Evacuated',v:0,sub:'edit →',edit:'kEvac'},
+    {l:'Relief Camps',v:0,sub:'operational',edit:'kCamps'},
+    {l:'SDRF / NDRF',v:0,sub:'teams deployed',edit:'kSdrf'},
+  ];
+  document.getElementById('kpiStrip').innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.cls||''}">
+      <div class="k-label">${k.l}</div>
+      <div class="k-val">${k.edit?`<input id="${k.edit}" value="${k.v}" oninput="recompute()">`:k.v}${k.small?` <small>${k.small}</small>`:''}</div>
+      <div class="k-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // alert status band color
+  const lvl=document.getElementById('alertLevel').value, sc=cssv(STATUS[lvl].c);
+  document.getElementById('statusDot').style.background=sc;
+  document.querySelector('.status-pill').style.borderColor=sc;
+  document.querySelector('.masthead').style.background=`linear-gradient(160deg, var(--ink), color-mix(in srgb, ${sc} 22%, var(--ink-2)))`;
+
+  // exec summary (only auto-draft if untouched)
+  const es=document.getElementById('execSummary');
+  if(!es.dataset.touched){
+    es.value=`As of ${document.getElementById('asOf').value} on ${document.getElementById('dateTo').value}, the district recorded ${tTot.toFixed(0)} mm of rainfall across ${affTal} of ${n} talukas in the past 24 hours (avg ${(tTot/n).toFixed(1)} mm), highest at ${hiTodayName} (${hiTodayVal.toFixed(0)} mm). Season cumulative stands at ${cTot.toFixed(0)} mm (avg ${(cTot/n).toFixed(0)} mm). ${damsWatch} of ${DAMS.length} reservoirs are at or above 75% of danger level and under watch. Reported impact to date: ${humanCas} human casualties, ${houses} houses damaged, ${rTot} roads blocked, no evacuations. Overall district status: ${STATUS[lvl].t}.`;
+    autosize(es);
+  }
+}
+
+/* mark exec summary as manually edited */
+document.getElementById('execSummary').addEventListener('input',function(){this.dataset.touched='1';});
+
+/* ---------- EXPORT / IMPORT (carry data day-to-day) ---------- */
+function snapshot(){
+  const o={};
+  document.querySelectorAll('input, textarea, select').forEach(el=>{if(el.id)o[el.id]=el.value;});
+  o.execTouched=document.getElementById('execSummary').dataset.touched||'';
+  return o;
+}
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(snapshot(),null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='narmada_monsoon_'+document.getElementById('dateTo').value.replace(/\//g,'-')+'.json';
+  a.click();
+}
+function importJSON(ev){
+  const f=ev.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{
+    const o=JSON.parse(r.result);
+    Object.keys(o).forEach(id=>{const el=document.getElementById(id);if(el&&id!=='execTouched')el.value=o[id];});
+    if(o.execTouched)document.getElementById('execSummary').dataset.touched='1';
+    recompute();document.querySelectorAll('textarea').forEach(autosize);
+  }catch(e){alert('Could not read that file — is it a saved report?');}};
+  r.readAsText(f);
+}
+
+/* ---------- INIT ---------- */
+buildRF();buildDMG();buildROADS();buildGauges();
+document.getElementById('genStamp').textContent=new Date().toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+['asOf','dateTo','dateFrom','alertLevel'].forEach(id=>document.getElementById(id).addEventListener('input',recompute));
+recompute();
+document.querySelectorAll('textarea').forEach(autosize);
+</script>
+</body>
+</html>
