@@ -227,9 +227,8 @@
   @media print{
     @page{size:A4;margin:12mm}
     @page land{size:A4 landscape;margin:12mm}
-    /* mixed orientation: narrative stays portrait; wide data (when comparing) + clippings go landscape */
-    #clipSection{page:land}
-    .foot.foot-land{page:land}
+    /* mixed orientation: only the wide comparison data goes landscape; clippings + narrative stay portrait
+       (portrait gives the tall page height that lets masonry figures paginate without being clipped) */
     body.comparing .cmp-land{page:land}
     body{background:#fff}
     .print-hidden{display:none !important}
@@ -242,8 +241,11 @@
     .narr,.clip-act-in{padding:0;min-height:0}
     .gauge,.track,.tank{break-inside:avoid}
     #clipSection:not(.has-clips){display:none !important}
-    .clips{column-width:250px}
-    .clips figure{box-shadow:none !important}
+    /* portrait 2-col masonry: figures never split across a page (avoids clipped/slivered images) */
+    .clips{column-count:2;column-width:auto;column-gap:14px}
+    .clips figure{box-shadow:none !important;break-inside:avoid;page-break-inside:avoid}
+    /* keep every narrative field (heading + text + image) whole on one page */
+    .grid2>div{break-inside:avoid;page-break-inside:avoid}
     .narr-fig{box-shadow:none !important;break-inside:avoid;max-width:100%}
     .narr-attach:not(.has-img){display:none !important}
     .masthead{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -857,9 +859,6 @@ function hideEmptyForPrint(){
     const ta=cap.querySelector('textarea');
     cap.classList.toggle('print-hidden', !ta || !ta.value.trim());
   });
-  // footer shares the clippings page (landscape) when clippings are present, else stays portrait
-  const foot=document.querySelector('.foot');
-  if(foot) foot.classList.toggle('foot-land', CLIPS.length>0);
   renumberSections();   // sequential numbers after empty sections drop out
 }
 function restoreAfterPrint(){
