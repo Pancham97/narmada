@@ -1,4 +1,4 @@
-# narmada.github.io
+# narmada
 
 **Daily Monsoon Situation Report — Narmada**
 
@@ -8,7 +8,7 @@ situation report. Every figure is editable; KPI tiles, rainfall bars and
 reservoir gauges recompute live; data carries day-to-day via JSON save/load;
 and the report prints straight to a PDF for the Collector.
 
-**Live site:** https://pancham97.github.io/narmada.github.io/
+**Live site:** https://pancham97.github.io/narmada/
 
 ## Features
 
