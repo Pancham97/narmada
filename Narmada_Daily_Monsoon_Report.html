@@ -210,10 +210,17 @@
   #clipSection.clips-drag{outline:2px dashed var(--water);outline-offset:-8px;background:#F4F9FC}
   /* optional image on any free-text field */
   .narr-attach{margin-top:8px}
-  .narr-fig{position:relative;margin:0 0 8px;border:1px solid var(--line);border-radius:8px;
-    overflow:hidden;background:#fff;box-shadow:var(--shadow);max-width:100%;width:max-content}
-  .narr-fig img{display:block;max-width:100%;height:auto}
-  .narr-attach.drag{outline:2px dashed var(--water);outline-offset:2px;border-radius:8px}
+  .narr-drop{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);
+    border:1px dashed var(--line);border-radius:8px;padding:7px 10px;background:#FCFDFD}
+  .narr-drop .dz{flex:1}
+  .narr-attach.drag .narr-drop{border-color:var(--water);background:#F4F9FC;color:var(--water)}
+  .narr-masonry{column-width:150px;column-gap:10px;margin-top:8px}
+  .narr-fig{break-inside:avoid;position:relative;margin:0 0 10px;border:1px solid var(--line);
+    border-radius:8px;overflow:hidden;background:#fff;box-shadow:var(--shadow);max-width:100%}
+  .narr-fig img{display:block;width:100%;height:auto}
+  .narr-fig[draggable="true"]{cursor:grab}
+  .narr-fig.dragging{opacity:.4}
+  .narr-fig.drop-target{outline:2px dashed var(--water);outline-offset:-2px}
   /* responsive */
   @media screen and (max-width:760px){  /* screen-only: A4 print (~703px) must keep the full multi-column layout */
     .kpis{grid-template-columns:repeat(3,1fr)}
@@ -244,10 +251,16 @@
     /* portrait 2-col masonry: figures never split across a page (avoids clipped/slivered images) */
     .clips{column-count:2;column-width:auto;column-gap:14px}
     .clips figure{box-shadow:none !important;break-inside:avoid;page-break-inside:avoid}
-    /* keep every narrative field (heading + text + image) whole on one page */
-    .grid2>div{break-inside:avoid;page-break-inside:avoid}
-    .narr-fig{box-shadow:none !important;break-inside:avoid;max-width:100%}
+    /* narrative fields can now carry many images: let their section + container flow across
+       pages (each image stays whole via figure break-inside:avoid) instead of being clipped */
+    .section:has(.narr){break-inside:auto;page-break-inside:auto}
+    .grid2>div{break-inside:auto;page-break-inside:auto}
+    .s-head{break-after:avoid;page-break-after:avoid}   /* heading stays with its text */
+    .narr{break-inside:avoid;page-break-inside:avoid}
+    .narr-masonry{column-count:2;column-width:auto;column-gap:10px}
+    .narr-fig{box-shadow:none !important;break-inside:avoid;page-break-inside:avoid;max-width:100%}
     .narr-attach:not(.has-img){display:none !important}
+    .narr-drop{display:none !important}
     .masthead{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
@@ -732,7 +745,8 @@ function snapshot(){
   document.querySelectorAll('input, textarea, select').forEach(el=>{if(el.id)o[el.id]=el.value;});
   o.execTouched=document.getElementById('execSummary').dataset.touched||'';
   o._clips=CLIPS.map(normClip);
-  o._narrImg=NARRIMG;
+  o._narrImg={};
+  Object.keys(NARRIMG).forEach(k=>{const a=normNarr(NARRIMG[k]);if(a.length)o._narrImg[k]=a;});
   o._cmp=CMP; o._comparing=document.body.classList.contains('comparing');
   return o;
 }
@@ -749,7 +763,9 @@ function importJSON(ev){
     Object.keys(o).forEach(id=>{const el=document.getElementById(id);if(el&&id!=='execTouched')el.value=o[id];});
     if(o.execTouched)document.getElementById('execSummary').dataset.touched='1';
     if(Array.isArray(o._clips)){CLIPS=o._clips.map(normClip);renderClips();}
-    NARRIMG=(o._narrImg&&typeof o._narrImg==='object')?o._narrImg:{};
+    NARRIMG={};
+    if(o._narrImg&&typeof o._narrImg==='object')
+      Object.keys(o._narrImg).forEach(k=>{NARRIMG[k]=normNarr(o._narrImg[k]);});
     renderAllNarrImg();
     if(o._cmp&&typeof o._cmp==='object')CMP=o._cmp;
     toggleCompare(!!o._comparing);
@@ -795,27 +811,83 @@ function setClipAction(i,v){if(CLIPS[i])CLIPS[i].action=v;}
 })();
 
 /* ---------- OPTIONAL IMAGE ON ANY FREE-TEXT FIELD ---------- */
-let NARRIMG = {};   // textarea id -> base64 data-URI (optional, per field)
+let NARRIMG = {};   // textarea id -> array of base64 data-URIs (optional, per field)
+function normNarr(v){
+  if (Array.isArray(v)) return v.filter(s => typeof s === 'string' && s);
+  if (typeof v === 'string' && v) return [v];   // migrate an old single-image save
+  return [];
+}
 function renderNarrImg(id){
   const box=document.querySelector('.narr-attach[data-for="'+id+'"]');
   if(!box) return;
-  const src=NARRIMG[id]||'';
+  const arr=NARRIMG[id]=normNarr(NARRIMG[id]);
+  const figs=arr.map((src,i)=>
+    `<figure class="narr-fig" draggable="true" data-i="${i}">`+
+      `<img src="${src}" alt="illustration ${i+1}">`+
+      `<button class="clip-rm no-print" title="Remove image" onclick="removeNarrImg('${id}',${i})">×</button>`+
+    `</figure>`).join('');
   box.innerHTML =
-    (src?`<figure class="narr-fig"><img src="${src}" alt="illustration">`
-        +`<button class="clip-rm no-print" title="Remove image" onclick="removeNarrImg('${id}')">×</button></figure>`:'')
-    +`<label class="btn-lite no-print" style="cursor:pointer">${src?'⟳ Replace image':'+ Add image'}`
-    +`<input type="file" accept="image/*" onchange="addNarrImg('${id}',event)" style="display:none"></label>`;
-  box.classList.toggle('has-img', !!src);
+    `<div class="narr-drop no-print"><span class="dz">Drop image(s) here</span>`+
+      `<label class="btn-lite" style="cursor:pointer">+ Add images`+
+        `<input type="file" accept="image/*" multiple onchange="addNarrImg('${id}',event)" style="display:none"></label>`+
+    `</div>`+
+    (figs?`<div class="narr-masonry">${figs}</div>`:'');
+  box.classList.toggle('has-img', arr.length>0);
 }
 function renderAllNarrImg(){document.querySelectorAll('.narr-attach').forEach(b=>renderNarrImg(b.dataset.for));}
-function addNarrImg(id,ev){
-  const f=ev.target.files&&ev.target.files[0]; ev.target.value='';
-  if(!f||!f.type||!f.type.startsWith('image/'))return;
-  const r=new FileReader();
-  r.onload=()=>{NARRIMG[id]=r.result;renderNarrImg(id);};
-  r.readAsDataURL(f);
+function addNarrImgs(id,files){
+  [...files].filter(f=>f.type&&f.type.startsWith('image/')).forEach(f=>{
+    const r=new FileReader();
+    r.onload=()=>{(NARRIMG[id]=normNarr(NARRIMG[id])).push(r.result);renderNarrImg(id);};
+    r.readAsDataURL(f);
+  });
 }
-function removeNarrImg(id){delete NARRIMG[id];renderNarrImg(id);}
+function addNarrImg(id,ev){addNarrImgs(id,ev.target.files);ev.target.value='';}
+function removeNarrImg(id,i){const a=NARRIMG[id]=normNarr(NARRIMG[id]);a.splice(i,1);renderNarrImg(id);}
+function moveNarrImg(id,from,to){        // insert dragged item before the item currently at `to`
+  const a=NARRIMG[id]=normNarr(NARRIMG[id]);
+  if(from<0||from>=a.length||from===to)return;
+  const [img]=a.splice(from,1);
+  const dest = to>from ? to-1 : to;      // items left of `to` shifted after the removal
+  a.splice(Math.max(0,Math.min(dest,a.length)),0,img);
+  renderNarrImg(id);
+}
+let narrDrag=null;   // {id, from} while a thumbnail is being dragged to reorder
+function wireNarrDnD(box,id){
+  box.addEventListener('dragstart',ev=>{
+    const fig=ev.target.closest('.narr-fig'); if(!fig)return;
+    narrDrag={id, from:+fig.dataset.i};
+    ev.dataTransfer.effectAllowed='move';
+    ev.dataTransfer.setData('text/narr-reorder', id+':'+fig.dataset.i);
+    fig.classList.add('dragging');
+  });
+  box.addEventListener('dragend',()=>{
+    box.querySelectorAll('.narr-fig').forEach(f=>f.classList.remove('dragging','drop-target'));
+    box.classList.remove('drag'); narrDrag=null;
+  });
+  box.addEventListener('dragover',ev=>{
+    if(narrDrag && narrDrag.id===id){                       // internal reorder
+      ev.preventDefault(); ev.dataTransfer.dropEffect='move';
+      const fig=ev.target.closest('.narr-fig');
+      box.querySelectorAll('.narr-fig').forEach(f=>f.classList.toggle('drop-target', f===fig));
+    } else if(!narrDrag && [...ev.dataTransfer.types].includes('Files')){   // external files
+      ev.preventDefault(); box.classList.add('drag');
+    }
+  });
+  box.addEventListener('dragleave',ev=>{ if(!box.contains(ev.relatedTarget)) box.classList.remove('drag'); });
+  box.addEventListener('drop',ev=>{
+    box.querySelectorAll('.narr-fig').forEach(f=>f.classList.remove('drop-target'));
+    if(ev.dataTransfer.files && ev.dataTransfer.files.length){               // add files
+      ev.preventDefault(); box.classList.remove('drag'); addNarrImgs(id, ev.dataTransfer.files); return;
+    }
+    if(narrDrag && narrDrag.id===id){                                       // reorder
+      ev.preventDefault();
+      const fig=ev.target.closest('.narr-fig');
+      if(fig){ moveNarrImg(id, narrDrag.from, +fig.dataset.i); }
+      else { const a=NARRIMG[id]=normNarr(NARRIMG[id]); a.push(a.splice(narrDrag.from,1)[0]); renderNarrImg(id); }
+    }
+  });
+}
 function initNarrImg(){
   document.querySelectorAll('textarea.narr').forEach(t=>{
     if(!t.id) return;
@@ -823,6 +895,7 @@ function initNarrImg(){
     const d=document.createElement('div');
     d.className='narr-attach'; d.dataset.for=t.id;
     t.after(d);
+    wireNarrDnD(d,t.id);
     renderNarrImg(t.id);
   });
 }
@@ -845,7 +918,7 @@ function restoreSectionNumbers(){
 /* ---------- HIDE EMPTY FREE-TEXT ON PRINT ---------- */
 function hideEmptyForPrint(){
   document.querySelectorAll('textarea.narr').forEach(t=>{
-    const empty = !t.value.trim() && !NARRIMG[t.id];   // keep the block if it has an image, even with no text
+    const empty = !t.value.trim() && normNarr(NARRIMG[t.id]).length===0;   // keep the block if it has any image
     const block = t.closest('.grid2 > div') || t.closest('.section');
     if(block) block.classList.toggle('print-hidden', empty);
   });
